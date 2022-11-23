@@ -1,0 +1,22 @@
+[package]
+name = "apple-ble"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+
+[dependencies]
+bluer = { git = "https://github.com/bluez/bluer.git", features = [
+    "bluetoothd",
+] }
+config = "0.13.2"
+tokio = { version = "1.21.2", features = ["full"] }
+async-trait = { version = "0.1.58", optional = true }
+sha2 = "0.10.6"
+bevy_reflect = "0.9.0"
+
+[features]
+default = []
+# AFIT = async_fn_in_trait
+disable_afit = ["dep:async-trait"]
