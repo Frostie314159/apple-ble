@@ -75,17 +75,17 @@ impl Advertisable<AirDropAdvertisementData> for AirDropAdvertisement {
         user_data: &Option<AirDropAdvertisementData>,
     ) -> Result<Advertisement, Box<dyn Error>> {
         let advertisement = Advertisement {
-            advertisement_type: Type::Broadcast,
+            advertisement_type: Type::Peripheral,
             discoverable: Some(true),
             local_name: Some(session.adapter.name().to_string()),
-            timeout: Some(Duration::from_millis(0)),
-            min_interval: Some(Duration::from_millis(100)),
-            max_interval: Some(Duration::from_millis(200)),
-            service_uuids: vec![Uuid]
-            manufacturer_data: BTreeMap::from([(
-                0x4C,
-                Self::assemble_user_data(user_data.clone()),
-            )]),
+            //timeout: Some(Duration::from_millis(0)),
+            //min_interval: Some(Duration::from_millis(100)),
+            //max_interval: Some(Duration::from_millis(200)),
+            service_uuids: vec![uuid::Uuid::new_v4()].into_iter().collect(),
+            // manufacturer_data: BTreeMap::from([(
+            //     0x4C,
+            //     Self::assemble_user_data(user_data.clone()),
+            // )]),
             ..Default::default()
         };
         println!("{:#?}", advertisement);
