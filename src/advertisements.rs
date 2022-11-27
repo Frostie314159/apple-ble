@@ -45,28 +45,36 @@ pub trait Advertisable<T: AdvertisableData> {
     }
 }
 pub struct AirDropAdvertisement;
-#[derive(Clone)]
+
 /// Data for an AirDrop advertisement.
+#[derive(Clone)]
 pub struct AirDropAdvertisementData {
-    pub apple_id: Option<String>,
-    pub phone: Option<String>,
-    pub email: Option<String>,
-    pub email2: Option<String>,
+    pub apple_id: [u8;2],
+    pub phone: [u8;2],
+    pub email: [u8;2]
 }
 impl AdvertisableData for AirDropAdvertisementData {
     fn get_user_data_length() -> usize {
-        8 // 4 * 2bytes = 8bytes
-}
+            8 // 4 * 2bytes = 8bytes
+    }
 }
 impl Into<Vec<u8>> for AirDropAdvertisementData {
     fn into(self) -> Vec<u8> {
         [
-            get_first_two_bytes_of_sha256(self.apple_id.unwrap_or_default()).to_be_bytes(),
-            get_first_two_bytes_of_sha256(self.phone.unwrap_or_default()).to_be_bytes(),
-            get_first_two_bytes_of_sha256(self.email.unwrap_or_default()).to_be_bytes(),
-            get_first_two_bytes_of_sha256(self.email2.unwrap_or_default()).to_be_bytes(),
+            self.apple_id,
+            self.phone,
+            self.email
         ]
         .concat()
+    }
+}
+impl AirDropAdvertisementData {
+    pub fn new(apple_id: Option<String>, phone: Option<String>, email: Option<String>) -> AirDropAdvertisementData {
+        AirDropAdvertisementData {
+            apple_id: get_first_two_bytes_of_sha256(apple_id.unwrap_or_default()),
+            phone: get_first_two_bytes_of_sha256(phone.unwrap_or_default()),
+            email: get_first_two_bytes_of_sha256(email.unwrap_or_default())
+        }
     }
 }
 impl Advertisable<AirDropAdvertisementData> for AirDropAdvertisement {
@@ -75,17 +83,16 @@ impl Advertisable<AirDropAdvertisementData> for AirDropAdvertisement {
         user_data: &Option<AirDropAdvertisementData>,
     ) -> Result<Advertisement, Box<dyn Error>> {
         let advertisement = Advertisement {
-            advertisement_type: Type::Peripheral,
-            discoverable: Some(true),
+            advertisement_type: Type::Broadcast,
             local_name: Some(session.adapter.name().to_string()),
-            //timeout: Some(Duration::from_millis(0)),
-            //min_interval: Some(Duration::from_millis(100)),
-            //max_interval: Some(Duration::from_millis(200)),
+            timeout: Some(Duration::from_millis(0)),
+            min_interval: Some(Duration::from_millis(100)),
+            max_interval: Some(Duration::from_millis(200)),
             service_uuids: vec![uuid::Uuid::new_v4()].into_iter().collect(),
-            // manufacturer_data: BTreeMap::from([(
-            //     0x4C,
-            //     Self::assemble_user_data(user_data.clone()),
-            // )]),
+            manufacturer_data: BTreeMap::from([(
+                0x4C,
+                Self::assemble_user_data(user_data.clone()),
+            )]),
             ..Default::default()
         };
         println!("{:#?}", advertisement);
