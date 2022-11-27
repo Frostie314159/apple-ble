@@ -2,28 +2,13 @@ use std::{collections::BTreeMap, error::Error, time::Duration};
 
 #[cfg(feature = "disable_afit")]
 use async_trait::async_trait;
-use bevy_reflect::{Reflect, Struct, StructInfo, TypeInfo, Typed};
 use bluer::adv::{Advertisement, AdvertisementHandle, Type};
 
 use crate::session::Session;
 use crate::util::get_first_two_bytes_of_sha256;
 
-// WARNING! OVERENGINEERING IS IN PROGRESS RIGHT HERE!
-pub trait AdvertisableData: Clone + Struct + Typed {
-    fn to_octets(&self) -> Vec<u8> {
-        let TypeInfo::Struct(struct_info) = <Self as Typed>::type_info() else {
-                panic!("User data wasn't a struct!")
-            };
-        let fields = self.iter_fields();
-        for (field, comment) in fields.zip(struct_info.iter()) {
-            println!("{:#?}", field.get_type_info());
-        }
-        // self.iter_field().map(|x: Option<Vec<u8>>| match x {
-        //     Some(data) => data,
-        //     None => vec![]
-        // });
-        vec![]
-    }
+pub trait AdvertisableData: Into<Vec<u8>> + Clone {
+    fn get_user_data_length() -> usize;
 }
 
 // If the user opted out of using "async_fn_in_trait", use the crate async-trait instead.
@@ -33,13 +18,8 @@ pub trait Advertisable<T: AdvertisableData> {
     /// Assemble user data.
     fn assemble_user_data(user_data: Option<T>) -> Vec<u8> {
         match user_data {
-            Some(ud) => ud.to_octets(),
-            None => {
-                let TypeInfo::Struct(struct_info) = <T as Typed>::type_info() else {
-                        panic!("User data wasn't a struct!")
-                    };
-                vec![0; struct_info.field_len()]
-            }
+            Some(ud) => ud.into(),
+            None => vec![0; T::get_user_data_length()] // NOTE: This took me fucking forever! Because stupid me wanted to use const generics.
         }
     }
     /// Advertisement-specific: validate user supplied data.
@@ -65,7 +45,7 @@ pub trait Advertisable<T: AdvertisableData> {
     }
 }
 pub struct AirDropAdvertisement;
-#[derive(Clone, Reflect)]
+#[derive(Clone)]
 /// Data for an AirDrop advertisement.
 pub struct AirDropAdvertisementData {
     pub apple_id: Option<String>,
@@ -73,9 +53,13 @@ pub struct AirDropAdvertisementData {
     pub email: Option<String>,
     pub email2: Option<String>,
 }
-impl AdvertisableData for AirDropAdvertisementData {}
-impl Into<[u8; 8]> for AirDropAdvertisementData {
-    fn into(self) -> [u8; 8] {
+impl AdvertisableData for AirDropAdvertisementData {
+    fn get_user_data_length() -> usize {
+        8 // 4 * 2bytes = 8bytes
+}
+}
+impl Into<Vec<u8>> for AirDropAdvertisementData {
+    fn into(self) -> Vec<u8> {
         [
             get_first_two_bytes_of_sha256(self.apple_id.unwrap_or_default()).to_be_bytes(),
             get_first_two_bytes_of_sha256(self.phone.unwrap_or_default()).to_be_bytes(),
@@ -83,8 +67,6 @@ impl Into<[u8; 8]> for AirDropAdvertisementData {
             get_first_two_bytes_of_sha256(self.email2.unwrap_or_default()).to_be_bytes(),
         ]
         .concat()
-        .try_into()
-        .unwrap() // Safe because 4*2 will, for the time being, always evaluate too 8.
     }
 }
 impl Advertisable<AirDropAdvertisementData> for AirDropAdvertisement {
@@ -92,19 +74,21 @@ impl Advertisable<AirDropAdvertisementData> for AirDropAdvertisement {
         session: &Session,
         user_data: &Option<AirDropAdvertisementData>,
     ) -> Result<Advertisement, Box<dyn Error>> {
-        Ok(Advertisement {
+        let advertisement = Advertisement {
             advertisement_type: Type::Broadcast,
             discoverable: Some(true),
             local_name: Some(session.adapter.name().to_string()),
             timeout: Some(Duration::from_millis(0)),
             min_interval: Some(Duration::from_millis(100)),
             max_interval: Some(Duration::from_millis(200)),
-
+            service_uuids: vec![Uuid]
             manufacturer_data: BTreeMap::from([(
                 0x4C,
                 Self::assemble_user_data(user_data.clone()),
             )]),
             ..Default::default()
-        })
+        };
+        println!("{:#?}", advertisement);
+        Ok(advertisement)
     }
 }
