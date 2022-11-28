@@ -107,7 +107,6 @@ impl Advertisable<AirDropAdvertisementData> for AirDropAdvertisement {
             timeout: Some(Duration::from_millis(0)),
             min_interval: Some(Duration::from_millis(100)),
             max_interval: Some(Duration::from_millis(200)),
-            service_uuids: vec![uuid::Uuid::new_v4()].into_iter().collect(),
             manufacturer_data: BTreeMap::from([(
                 0x4C,
                 Self::assemble_user_data(user_data.clone()),
