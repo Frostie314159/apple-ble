@@ -7,9 +7,9 @@ async fn register_airdrop_advertisement() -> Result<(), Box<dyn Error>> {
     let session = apple_ble::session::Session::new().await;
     apple_ble::advertisements::AirDropAdvertisement::register(
         &session.unwrap(),
-        &Some(apple_ble::advertisements::AirDropAdvertisementData::new(
+        &apple_ble::advertisements::AirDropAdvertisementData::new(
             None, None, None,
-        )),
+        ),
     )
     .await?;
     Ok(())

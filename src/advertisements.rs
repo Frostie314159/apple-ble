@@ -7,34 +7,29 @@ use bluer::adv::{Advertisement, AdvertisementHandle, Type};
 use crate::session::Session;
 use crate::util::get_first_two_bytes_of_sha256;
 
-pub trait AdvertisableData: Into<Vec<u8>> + Clone {
-    fn get_user_data_length() -> usize;
+const APPLE_MAGIC: u16 = 0x4C_u16;
+
+pub trait AdvertisableData: Clone {
+    fn to_octets(&self) -> Vec<u8>;
 }
 
 // If the user opted out of using "async_fn_in_trait", use the crate async-trait instead.
 #[cfg_attr(feature = "disable_afit", async_trait)]
 /// Any kind of advertisement.
 pub trait Advertisable<T: AdvertisableData> {
-    /// Assemble user data.
-    fn assemble_user_data(user_data: Option<T>) -> Vec<u8> {
-        match user_data {
-            Some(ud) => ud.into(),
-            None => vec![0; T::get_user_data_length()] // NOTE: This took me fucking forever! Because stupid me wanted to use const generics.
-        }
-    }
     /// Advertisement-specific: validate user supplied data.
-    fn validate_user_data(_user_data: &Option<T>) -> Result<(), Box<dyn Error>> {
+    fn validate_user_data(_user_data: &T) -> Result<(), Box<dyn Error>> {
         Ok(())
     }
     /// Advertisement-specific: assemble user supplied data to advertisement.
     fn assemble_advertisement(
         session: &Session,
-        user_data: &Option<T>,
+        user_data: &T,
     ) -> Result<Advertisement, Box<dyn Error>>;
     /// Register any advertisement.
     async fn register(
         session: &Session,
-        user_data: &Option<T>,
+        user_data: &T,
     ) -> Result<AdvertisementHandle, Box<dyn Error>> {
         Self::validate_user_data(user_data)?;
 
@@ -44,7 +39,7 @@ pub trait Advertisable<T: AdvertisableData> {
             .await?)
     }
 }
-pub struct AirDropAdvertisement;
+
 
 /// Data for an AirDrop advertisement.
 #[derive(Clone)]
@@ -54,12 +49,7 @@ pub struct AirDropAdvertisementData {
     pub email: [u8;2]
 }
 impl AdvertisableData for AirDropAdvertisementData {
-    fn get_user_data_length() -> usize {
-            8 // 4 * 2bytes = 8bytes
-    }
-}
-impl Into<Vec<u8>> for AirDropAdvertisementData {
-    fn into(self) -> Vec<u8> {
+    fn to_octets(&self) -> Vec<u8> {
         [
             // Message type
             0x05, 
@@ -96,24 +86,56 @@ impl AirDropAdvertisementData {
         }
     }
 }
+
+/// [https://github.com/furiousMAC/continuity/blob/master/messages/airdrop.md](AirDrop advertisement)
+pub struct AirDropAdvertisement;
 impl Advertisable<AirDropAdvertisementData> for AirDropAdvertisement {
     fn assemble_advertisement(
         session: &Session,
-        user_data: &Option<AirDropAdvertisementData>,
+        user_data: &AirDropAdvertisementData,
     ) -> Result<Advertisement, Box<dyn Error>> {
-        let advertisement = Advertisement {
+        Ok(Advertisement {
             advertisement_type: Type::Broadcast,
             local_name: Some(session.adapter.name().to_string()),
             timeout: Some(Duration::from_millis(0)),
             min_interval: Some(Duration::from_millis(100)),
             max_interval: Some(Duration::from_millis(200)),
             manufacturer_data: BTreeMap::from([(
-                0x4C,
-                Self::assemble_user_data(user_data.clone()),
+                APPLE_MAGIC,
+                user_data.to_octets(),
             )]),
             ..Default::default()
-        };
-        println!("{:#?}", advertisement);
-        Ok(advertisement)
+        })
+    }
+}
+
+
+/// Data for an AirPlay source message
+#[derive(Clone)]
+pub struct AirPlaySourceAdvertisementData;
+impl AdvertisableData for AirPlaySourceAdvertisementData {
+    fn to_octets(&self) -> Vec<u8> {
+        // This is constant.
+        [
+            0x0a,
+            0x01,
+            0x00
+        ].to_vec()
+    }
+}
+
+/// AirPlay source message [https://github.com/furiousMAC/continuity/blob/master/messages/airplay_source.md](AirPlay source message)
+pub struct AirPlaySourceAdvertisement;
+impl Advertisable<AirPlaySourceAdvertisementData> for AirDropAdvertisement {
+    /// The user_data field can be ignored.
+    fn assemble_advertisement(
+        session: &Session,
+        _user_data: &AirPlaySourceAdvertisementData,
+    ) -> Result<Advertisement, Box<dyn Error>> {
+        Ok(Advertisement{
+            advertisement_type: Type::Broadcast,
+            local_name: Some(session.adapter.name().to_string()),
+            ..Default::default()
+        })
     }
 }
