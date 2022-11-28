@@ -61,11 +61,30 @@ impl AdvertisableData for AirDropAdvertisementData {
 impl Into<Vec<u8>> for AirDropAdvertisementData {
     fn into(self) -> Vec<u8> {
         [
-            self.apple_id,
-            self.phone,
-            self.email
-        ]
-        .concat()
+            // Message type
+            0x05, 
+            // Message length
+            0x12,
+            // 8bytes of padding
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            // AirDrop version
+            0x01,
+            self.apple_id[0],
+            self.apple_id[1],
+            self.phone[0],
+            self.phone[1],
+            self.email[0],
+            self.email[1],
+            self.email[0],
+            self.email[1]
+        ].to_vec()
     }
 }
 impl AirDropAdvertisementData {
