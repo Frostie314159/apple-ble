@@ -5,4 +5,3 @@ pub fn get_first_two_bytes_of_sha256(input: impl AsRef<[u8]>) -> [u8; 2] {
     let result = hasher.finalize();
     [result[0], result[1]]
 }
-pub struct TraitContainer<T>(T);
