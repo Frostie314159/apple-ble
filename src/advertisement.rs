@@ -1,3 +1,4 @@
+use std::net::Ipv4Addr;
 use std::{collections::BTreeMap, error::Error, time::Duration};
 
 #[cfg(feature = "disable_afit")]
@@ -10,7 +11,7 @@ use crate::util::get_first_two_bytes_of_sha256;
 const APPLE_MAGIC: u16 = 0x4C_u16;
 
 pub trait AdvertisableData: Clone {
-    fn to_octets(&self) -> Vec<u8>;
+    fn octets(&self) -> Vec<u8>;
 }
 
 // If the user opted out of using "async_fn_in_trait", use the crate async-trait instead.
@@ -44,12 +45,15 @@ pub trait Advertisable<T: AdvertisableData> {
 /// Data for an AirDrop advertisement.
 #[derive(Clone)]
 pub struct AirDropAdvertisementData {
-    pub apple_id: [u8;2],
-    pub phone: [u8;2],
-    pub email: [u8;2]
+    pub apple_id: Option<String>,
+    pub phone: Option<String>,
+    pub email: Option<String>
 }
 impl AdvertisableData for AirDropAdvertisementData {
-    fn to_octets(&self) -> Vec<u8> {
+    fn octets(&self) -> Vec<u8> {
+        let apple_id = get_first_two_bytes_of_sha256(self.apple_id.clone().unwrap_or_default());
+        let phone = get_first_two_bytes_of_sha256(self.phone.clone().unwrap_or_default());
+        let email = get_first_two_bytes_of_sha256(self.email.clone().unwrap_or_default());
         [
             // Message type
             0x05, 
@@ -66,28 +70,19 @@ impl AdvertisableData for AirDropAdvertisementData {
             0x00,
             // AirDrop version
             0x01,
-            self.apple_id[0],
-            self.apple_id[1],
-            self.phone[0],
-            self.phone[1],
-            self.email[0],
-            self.email[1],
-            self.email[0],
-            self.email[1]
+            apple_id[0],
+            apple_id[1],
+            phone[0],
+            phone[1],
+            email[0],
+            email[1],
+            email[0],
+            email[1]
         ].to_vec()
     }
 }
-impl AirDropAdvertisementData {
-    pub fn new(apple_id: Option<String>, phone: Option<String>, email: Option<String>) -> AirDropAdvertisementData {
-        AirDropAdvertisementData {
-            apple_id: get_first_two_bytes_of_sha256(apple_id.unwrap_or_default()),
-            phone: get_first_two_bytes_of_sha256(phone.unwrap_or_default()),
-            email: get_first_two_bytes_of_sha256(email.unwrap_or_default())
-        }
-    }
-}
 
-/// [https://github.com/furiousMAC/continuity/blob/master/messages/airdrop.md](AirDrop advertisement)
+/// https://github.com/furiousMAC/continuity/blob/master/messages/airdrop.md
 pub struct AirDropAdvertisement;
 impl Advertisable<AirDropAdvertisementData> for AirDropAdvertisement {
     fn assemble_advertisement(
@@ -102,7 +97,7 @@ impl Advertisable<AirDropAdvertisementData> for AirDropAdvertisement {
             max_interval: Some(Duration::from_millis(200)),
             manufacturer_data: BTreeMap::from([(
                 APPLE_MAGIC,
-                user_data.to_octets(),
+                user_data.octets(),
             )]),
             ..Default::default()
         })
@@ -114,7 +109,7 @@ impl Advertisable<AirDropAdvertisementData> for AirDropAdvertisement {
 #[derive(Clone)]
 pub struct AirPlaySourceAdvertisementData;
 impl AdvertisableData for AirPlaySourceAdvertisementData {
-    fn to_octets(&self) -> Vec<u8> {
+    fn octets(&self) -> Vec<u8> {
         // This is constant.
         [
             0x0a,
@@ -124,9 +119,9 @@ impl AdvertisableData for AirPlaySourceAdvertisementData {
     }
 }
 
-/// AirPlay source message [https://github.com/furiousMAC/continuity/blob/master/messages/airplay_source.md](AirPlay source message)
+/// AirPlay source message https://github.com/furiousMAC/continuity/blob/master/messages/airplay_source.md
 pub struct AirPlaySourceAdvertisement;
-impl Advertisable<AirPlaySourceAdvertisementData> for AirDropAdvertisement {
+impl Advertisable<AirPlaySourceAdvertisementData> for AirPlaySourceAdvertisement {
     /// The user_data field can be ignored.
     fn assemble_advertisement(
         session: &Session,
@@ -137,5 +132,31 @@ impl Advertisable<AirPlaySourceAdvertisementData> for AirDropAdvertisement {
             local_name: Some(session.adapter.name().to_string()),
             ..Default::default()
         })
+    }
+}
+
+
+/// Data for an AirPlay target message
+#[derive(Clone)]
+pub struct AirPlayTargetAdvertisement{
+    flags: Option<u8>,
+    seed: Option<u8>,
+    ip_address: Ipv4Addr
+}
+impl AdvertisableData for AirPlayTargetAdvertisement {
+    fn octets(&self) -> Vec<u8> {
+        let flags = self.flags.unwrap_or(0x03);
+        let seed = self.seed.unwrap_or(0x07);
+        let ip_address = self.ip_address.octets();
+        [
+            0x09,
+            0x06,
+            flags,
+            seed,
+            ip_address[0],
+            ip_address[1],
+            ip_address[2],
+            ip_address[3]
+        ].to_vec()
     }
 }
