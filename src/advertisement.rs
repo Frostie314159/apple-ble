@@ -1,4 +1,4 @@
-use std::net::Ipv4Addr;
+use std::net::{Ipv4Addr, Ipv6Addr};
 use std::{collections::BTreeMap, error::Error, time::Duration};
 
 #[cfg(feature = "disable_afit")]
@@ -125,11 +125,18 @@ impl Advertisable<AirPlaySourceAdvertisementData> for AirPlaySourceAdvertisement
     /// The user_data field can be ignored.
     fn assemble_advertisement(
         session: &Session,
-        _user_data: &AirPlaySourceAdvertisementData,
+        user_data: &AirPlaySourceAdvertisementData,
     ) -> Result<Advertisement, Box<dyn Error>> {
         Ok(Advertisement{
             advertisement_type: Type::Broadcast,
             local_name: Some(session.adapter.name().to_string()),
+            timeout: Some(Duration::from_millis(0)),
+            min_interval: Some(Duration::from_millis(100)),
+            max_interval: Some(Duration::from_millis(200)),
+            manufacturer_data: BTreeMap::from([(
+                APPLE_MAGIC,
+                user_data.octets()
+            )]),
             ..Default::default()
         })
     }
@@ -138,12 +145,12 @@ impl Advertisable<AirPlaySourceAdvertisementData> for AirPlaySourceAdvertisement
 
 /// Data for an AirPlay target message
 #[derive(Clone)]
-pub struct AirPlayTargetAdvertisement{
-    flags: Option<u8>,
-    seed: Option<u8>,
-    ip_address: Ipv4Addr
+pub struct AirPlayTargetAdvertisementData {
+    pub flags: Option<u8>,
+    pub seed: Option<u8>,
+    pub ip_address: Ipv4Addr
 }
-impl AdvertisableData for AirPlayTargetAdvertisement {
+impl AdvertisableData for AirPlayTargetAdvertisementData {
     fn octets(&self) -> Vec<u8> {
         let flags = self.flags.unwrap_or(0x03);
         let seed = self.seed.unwrap_or(0x07);
@@ -158,5 +165,90 @@ impl AdvertisableData for AirPlayTargetAdvertisement {
             ip_address[2],
             ip_address[3]
         ].to_vec()
+    }
+}
+
+/// AirPlay target message https://github.com/furiousMAC/continuity/blob/master/messages/airplay_target.md
+pub struct AirPlayTargetAdvertisement;
+impl Advertisable<AirPlayTargetAdvertisementData> for AirPlayTargetAdvertisement {
+    fn assemble_advertisement(
+        session: &Session,
+        user_data: &AirPlayTargetAdvertisementData,
+    ) -> Result<Advertisement, Box<dyn Error>> {
+        Ok(Advertisement{
+            advertisement_type: Type::Broadcast,
+            local_name: Some(session.adapter.name().to_string()),
+            timeout: Some(Duration::from_millis(0)),
+            min_interval: Some(Duration::from_millis(100)),
+            max_interval: Some(Duration::from_millis(200)),
+            manufacturer_data: BTreeMap::from([(
+                APPLE_MAGIC,
+                user_data.octets()
+            )]),
+            ..Default::default()
+        })
+    }
+}
+
+
+/// Data for an AirPrint message
+#[derive(Clone)]
+pub struct AirPrintAdvertisementData {
+    pub port: u16,
+    pub ip_addr: Ipv6Addr,
+    pub power: u8
+}
+impl AdvertisableData for AirPrintAdvertisementData {
+    fn octets(&self) -> Vec<u8> {
+        let port = self.port.to_be_bytes();
+        let ip_addr = self.ip_addr.octets();
+        [
+            0x03,
+            0x16,
+            0x74,
+            0x07,
+            0x6f,
+            port[0],
+            port[1],
+            ip_addr[0],
+            ip_addr[1],
+            ip_addr[2],
+            ip_addr[3],
+            ip_addr[4],
+            ip_addr[5],
+            ip_addr[6],
+            ip_addr[7],
+            ip_addr[8],
+            ip_addr[9],
+            ip_addr[10],
+            ip_addr[11],
+            ip_addr[12],
+            ip_addr[13],
+            ip_addr[14],
+            ip_addr[15],
+            self.power
+        ].to_vec()
+    }
+}
+
+/// AirPlay target message https://github.com/furiousMAC/continuity/blob/master/messages/airplay_target.md
+pub struct AirPrintAdvertisement;
+impl Advertisable<AirPrintAdvertisementData> for AirPrintAdvertisement {
+    fn assemble_advertisement(
+        session: &Session,
+        user_data: &AirPrintAdvertisementData,
+    ) -> Result<Advertisement, Box<dyn Error>> {
+        Ok(Advertisement{
+            advertisement_type: Type::Broadcast,
+            local_name: Some(session.adapter.name().to_string()),
+            timeout: Some(Duration::from_millis(0)),
+            min_interval: Some(Duration::from_millis(100)),
+            max_interval: Some(Duration::from_millis(200)),
+            manufacturer_data: BTreeMap::from([(
+                APPLE_MAGIC,
+                user_data.octets()
+            )]),
+            ..Default::default()
+        })
     }
 }
