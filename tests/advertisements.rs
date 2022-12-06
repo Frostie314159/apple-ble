@@ -57,3 +57,16 @@ async fn test_airprint_advertisement() -> Result<(), Box<dyn Error>> {
     .await?;
     Ok(())
 }
+
+#[test(flavor = "multi_thread", worker_threads = 1)]
+async fn test_findmy_advertisement() -> Result<(), Box<dyn Error>> {
+    let session = apple_ble::session::Session::new().await?;
+    apple_ble::advertisement::FindMyAdvertisement::register(
+        &session,
+        &apple_ble::advertisement::FindMyAdvertisementData {
+            public_key: [0; 28]
+        },
+    )
+    .await?;
+    Ok(())
+}

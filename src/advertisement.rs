@@ -6,9 +6,9 @@ use async_trait::async_trait;
 use bluer::adv::{Advertisement, AdvertisementHandle, Type};
 
 use crate::session::Session;
-use crate::util::get_first_two_bytes_of_sha256;
+use crate::util::{get_first_two_bytes_of_sha256, set_device_addr};
 
-const APPLE_MAGIC: u16 = 0x4C_u16;
+const APPLE_MAGIC: u16 = 0x4C00_u16;
 
 pub trait AdvertisableData: Clone {
     fn octets(&self) -> Vec<u8>;
@@ -54,31 +54,19 @@ impl AdvertisableData for AirDropAdvertisementData {
         let apple_id = get_first_two_bytes_of_sha256(self.apple_id.clone().unwrap_or_default());
         let phone = get_first_two_bytes_of_sha256(self.phone.clone().unwrap_or_default());
         let email = get_first_two_bytes_of_sha256(self.email.clone().unwrap_or_default());
-        [
-            // Message type
-            0x05, 
-            // Message length
-            0x12,
-            // 8bytes of padding
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            // AirDrop version
-            0x01,
-            apple_id[0],
-            apple_id[1],
-            phone[0],
-            phone[1],
-            email[0],
-            email[1],
-            email[0],
-            email[1]
-        ].to_vec()
+        [   
+            
+            vec![
+                0x05,   // Message type
+                0x12    // Message length
+            ],
+            vec![0;8],  // 8bytes of padding
+            vec![0x01], // AirDrop version
+            apple_id.to_vec(),
+            phone.to_vec(),
+            email.to_vec(),
+            email.to_vec()
+        ].concat()
     }
 }
 
@@ -111,11 +99,11 @@ pub struct AirPlaySourceAdvertisementData;
 impl AdvertisableData for AirPlaySourceAdvertisementData {
     fn octets(&self) -> Vec<u8> {
         // This is constant.
-        [
-            0x0a,
-            0x01,
+        vec![
+            0x0a,   // Message type
+            0x01,   // Message length
             0x00
-        ].to_vec()
+        ]
     }
 }
 
@@ -156,15 +144,14 @@ impl AdvertisableData for AirPlayTargetAdvertisementData {
         let seed = self.seed.unwrap_or(0x07);
         let ip_address = self.ip_address.octets();
         [
-            0x09,
-            0x06,
-            flags,
-            seed,
-            ip_address[0],
-            ip_address[1],
-            ip_address[2],
-            ip_address[3]
-        ].to_vec()
+            vec![
+                0x09,   // Message type
+                0x06,   // Message length
+                flags,
+                seed
+            ],
+            ip_address.to_vec()
+        ].concat()
     }
 }
 
@@ -203,41 +190,76 @@ impl AdvertisableData for AirPrintAdvertisementData {
         let port = self.port.to_be_bytes();
         let ip_addr = self.ip_addr.octets();
         [
-            0x03,
-            0x16,
-            0x74,
-            0x07,
-            0x6f,
-            port[0],
-            port[1],
-            ip_addr[0],
-            ip_addr[1],
-            ip_addr[2],
-            ip_addr[3],
-            ip_addr[4],
-            ip_addr[5],
-            ip_addr[6],
-            ip_addr[7],
-            ip_addr[8],
-            ip_addr[9],
-            ip_addr[10],
-            ip_addr[11],
-            ip_addr[12],
-            ip_addr[13],
-            ip_addr[14],
-            ip_addr[15],
-            self.power
-        ].to_vec()
+            vec![
+                0x03,   // Message type
+                0x16,   // Message length
+                0x74,   // Address type
+                0x07,   // Resource path
+                0x6f    // Security type
+            ],
+            port.to_vec(),
+            ip_addr.to_vec(),
+            vec![
+                self.power
+            ]
+        ].concat()
     }
 }
 
-/// AirPlay target message https://github.com/furiousMAC/continuity/blob/master/messages/airplay_target.md
+/// AirPrint message https://github.com/furiousMAC/continuity/blob/master/messages/airprint.md
 pub struct AirPrintAdvertisement;
 impl Advertisable<AirPrintAdvertisementData> for AirPrintAdvertisement {
     fn assemble_advertisement(
         session: &Session,
         user_data: &AirPrintAdvertisementData,
     ) -> Result<Advertisement, Box<dyn Error>> {
+        Ok(Advertisement{
+            advertisement_type: Type::Broadcast,
+            local_name: Some(session.adapter.name().to_string()),
+            timeout: Some(Duration::from_millis(0)),
+            min_interval: Some(Duration::from_millis(100)),
+            max_interval: Some(Duration::from_millis(200)),
+            manufacturer_data: BTreeMap::from([(
+                APPLE_MAGIC,
+                user_data.octets()
+            )]),
+            ..Default::default()
+        })
+    }
+}
+
+
+/// Data for a FindMy message
+#[derive(Clone)]
+pub struct FindMyAdvertisementData {
+    pub public_key: [u8; 28]
+}
+impl AdvertisableData for FindMyAdvertisementData {
+    fn octets(&self) -> Vec<u8> {
+        let public_key = self.public_key.split_at(6);
+        [
+            vec![
+                0x12,   // Message length
+                0x19,   // Message type
+                0x00
+            ],
+            public_key.1.to_vec(),
+            vec![
+                public_key.0[0] >> 6,
+                0x00
+            ]
+        ].concat()
+    }
+}
+
+/// FindMy message https://github.com/furiousMAC/continuity/blob/master/messages/findmy.md
+pub struct FindMyAdvertisement;
+impl Advertisable<FindMyAdvertisementData> for FindMyAdvertisement {
+    fn assemble_advertisement(
+        session: &Session,
+        user_data: &FindMyAdvertisementData,
+    ) -> Result<Advertisement, Box<dyn Error>> {
+        set_device_addr(session, &user_data.public_key[0..6])?;
         Ok(Advertisement{
             advertisement_type: Type::Broadcast,
             local_name: Some(session.adapter.name().to_string()),

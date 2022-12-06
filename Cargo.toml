@@ -17,6 +17,9 @@ tokio = { version = "1.22.0", features = ["full"] }
 async-trait = { version = "0.1.58", optional = true }
 sha2 = "0.10.6"
 uuid = { version = "1.2.2", features = ["v4"] }
+sudo = "0.6.0"
+systemctl = "0.1.8"
+eui48 = "1.1.0"
 
 [features]
 default = []
