@@ -5,6 +5,7 @@ edition = "2021"
 description = "A library for interfacing with apple devices via BLE."
 license = "MIT AND Apache-2.0"
 repository = "https://github.com/Frostie314159/apple-ble"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
