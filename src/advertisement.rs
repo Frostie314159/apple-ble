@@ -24,19 +24,19 @@ pub trait Advertisable<T: AdvertisableData> {
     }
     /// Advertisement-specific: assemble user supplied data to advertisement.
     fn assemble_advertisement(
-        session: &Session,
+        session: &mut Session,
         user_data: &T,
     ) -> Result<Advertisement, Box<dyn Error>>;
     /// Register any advertisement.
     async fn register(
-        session: &Session,
+        session: &mut Session,
         user_data: &T,
     ) -> Result<AdvertisementHandle, Box<dyn Error>> {
         Self::validate_user_data(user_data)?;
-
+        let advertisement = Self::assemble_advertisement(session, user_data)?;
         Ok(session
             .adapter
-            .advertise(Self::assemble_advertisement(session, user_data)?)
+            .advertise(advertisement)
             .await?)
     }
 }
@@ -74,7 +74,7 @@ impl AdvertisableData for AirDropAdvertisementData {
 pub struct AirDropAdvertisement;
 impl Advertisable<AirDropAdvertisementData> for AirDropAdvertisement {
     fn assemble_advertisement(
-        session: &Session,
+        session: &mut Session,
         user_data: &AirDropAdvertisementData,
     ) -> Result<Advertisement, Box<dyn Error>> {
         Ok(Advertisement {
@@ -112,7 +112,7 @@ pub struct AirPlaySourceAdvertisement;
 impl Advertisable<AirPlaySourceAdvertisementData> for AirPlaySourceAdvertisement {
     /// The user_data field can be ignored.
     fn assemble_advertisement(
-        session: &Session,
+        session: &mut Session,
         user_data: &AirPlaySourceAdvertisementData,
     ) -> Result<Advertisement, Box<dyn Error>> {
         Ok(Advertisement{
@@ -159,7 +159,7 @@ impl AdvertisableData for AirPlayTargetAdvertisementData {
 pub struct AirPlayTargetAdvertisement;
 impl Advertisable<AirPlayTargetAdvertisementData> for AirPlayTargetAdvertisement {
     fn assemble_advertisement(
-        session: &Session,
+        session: &mut Session,
         user_data: &AirPlayTargetAdvertisementData,
     ) -> Result<Advertisement, Box<dyn Error>> {
         Ok(Advertisement{
@@ -210,7 +210,7 @@ impl AdvertisableData for AirPrintAdvertisementData {
 pub struct AirPrintAdvertisement;
 impl Advertisable<AirPrintAdvertisementData> for AirPrintAdvertisement {
     fn assemble_advertisement(
-        session: &Session,
+        session: &mut Session,
         user_data: &AirPrintAdvertisementData,
     ) -> Result<Advertisement, Box<dyn Error>> {
         Ok(Advertisement{
@@ -256,7 +256,7 @@ impl AdvertisableData for FindMyAdvertisementData {
 pub struct FindMyAdvertisement;
 impl Advertisable<FindMyAdvertisementData> for FindMyAdvertisement {
     fn assemble_advertisement(
-        session: &Session,
+        session: &mut Session,
         user_data: &FindMyAdvertisementData,
     ) -> Result<Advertisement, Box<dyn Error>> {
         set_device_addr(session, &user_data.public_key[0..6])?;

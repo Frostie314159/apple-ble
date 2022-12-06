@@ -9,7 +9,9 @@ pub fn get_first_two_bytes_of_sha256(input: impl AsRef<[u8]>) -> [u8; 2] {
     let result = hasher.finalize();
     [result[0], result[1]]
 }
-pub fn set_device_addr(session: &Session, device_addr: &[u8]) -> Result<(), Box<dyn Error>> {
+pub fn set_device_addr(session: &mut Session, device_addr: &[u8]) -> Result<(), Box<dyn Error>> {
+    assert!(!session.mac_changed, "Can only change mac once.");
+    session.mac_changed = true;
     sudo::escalate_if_needed()?;
     std::process::Command::new("bdaddr").args([
         "-i",

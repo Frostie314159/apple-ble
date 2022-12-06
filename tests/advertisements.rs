@@ -4,9 +4,9 @@ use tokio::test;
 
 #[test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_airdrop_advertisement() -> Result<(), Box<dyn Error>> {
-    let session = apple_ble::session::Session::new().await?;
+    let mut session = apple_ble::session::Session::new().await?;
     apple_ble::advertisement::AirDropAdvertisement::register(
-        &session,
+        &mut session,
         &apple_ble::advertisement::AirDropAdvertisementData{
             apple_id: None,
             phone: None,
@@ -19,9 +19,9 @@ async fn test_airdrop_advertisement() -> Result<(), Box<dyn Error>> {
 
 #[test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_airplaysource_advertisement() -> Result<(), Box<dyn Error>> {
-    let session = apple_ble::session::Session::new().await?;
+    let mut session = apple_ble::session::Session::new().await?;
     apple_ble::advertisement::AirPlaySourceAdvertisement::register(
-        &session,
+        &mut session,
         &apple_ble::advertisement::AirPlaySourceAdvertisementData {},
     )
     .await?;
@@ -30,9 +30,9 @@ async fn test_airplaysource_advertisement() -> Result<(), Box<dyn Error>> {
 
 #[test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_airplaytarget_advertisement() -> Result<(), Box<dyn Error>> {
-    let session = apple_ble::session::Session::new().await?;
+    let mut session = apple_ble::session::Session::new().await?;
     apple_ble::advertisement::AirPlayTargetAdvertisement::register(
-        &session,
+        &mut session,
         &apple_ble::advertisement::AirPlayTargetAdvertisementData {
             flags: Some(0x0),
             seed: Some(0x42),
@@ -45,9 +45,9 @@ async fn test_airplaytarget_advertisement() -> Result<(), Box<dyn Error>> {
 
 #[test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_airprint_advertisement() -> Result<(), Box<dyn Error>> {
-    let session = apple_ble::session::Session::new().await?;
+    let mut session = apple_ble::session::Session::new().await?;
     apple_ble::advertisement::AirPrintAdvertisement::register(
-        &session,
+        &mut session,
         &apple_ble::advertisement::AirPrintAdvertisementData {
             port: 0x1337,
             ip_addr: Ipv6Addr::LOCALHOST,
@@ -60,9 +60,9 @@ async fn test_airprint_advertisement() -> Result<(), Box<dyn Error>> {
 
 #[test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_findmy_advertisement() -> Result<(), Box<dyn Error>> {
-    let session = apple_ble::session::Session::new().await?;
+    let mut session = apple_ble::session::Session::new().await?;
     apple_ble::advertisement::FindMyAdvertisement::register(
-        &session,
+        &mut session,
         &apple_ble::advertisement::FindMyAdvertisementData {
             public_key: [0; 28]
         },
