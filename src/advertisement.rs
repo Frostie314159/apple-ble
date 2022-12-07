@@ -11,7 +11,7 @@ use futures::executor;
 use crate::session::Session;
 use crate::util::set_device_addr;
 
-const APPLE_MAGIC: u16 = 0x4C00_u16;
+const APPLE_MAGIC: u16 = 0x4c;
 
 pub trait AdvertisableData: Clone + PartialEq + Debug {
     fn octets(&self) -> Vec<u8>;
