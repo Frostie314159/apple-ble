@@ -20,10 +20,16 @@ sha2 = "0.10.6"
 uuid = { version = "1.2.2", features = ["v4"] }
 sudo = "0.6.0"
 systemctl = "0.1.8"
-eui48 = "1.1.0"
+eui48 = { version = "1.1.0", default-features = false }
 futures = "0.3.25"
+clap = { version = "4.0.29", optional = true }
 
 [features]
 default = []
 # AFIT = async_fn_in_trait
 disable_afit = ["dep:async-trait"]
+cli = ["dep:clap"]
+
+[[bin]]
+name = "cli"
+required_features = ["cli"]
