@@ -32,4 +32,4 @@ cli = ["dep:clap"]
 
 [[bin]]
 name = "cli"
-required_features = ["cli"]
+required-features = ["cli"]
