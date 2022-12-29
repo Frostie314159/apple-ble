@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use std::net::{Ipv4Addr, Ipv6Addr};
 use std::{collections::BTreeMap, error::Error, time::Duration};
 
-#[cfg(feature = "disable_afit")]
+#[cfg(not(feature = "disable_afit"))]
 use async_trait::async_trait;
 use bluer::adv::{Advertisement, AdvertisementHandle, Type};
 use bluer::{Device, Address};
@@ -13,12 +13,12 @@ use crate::util::set_device_addr;
 
 const APPLE_MAGIC: u16 = 0x4c;
 
-pub trait AdvertisableData: Clone + PartialEq + Debug {
+pub trait AdvertisableData: Clone + PartialEq + Debug + Sync {
     fn octets(&self) -> Vec<u8>;
 }
 
 // If the user opted out of using "async_fn_in_trait", use the crate async-trait instead.
-#[cfg_attr(feature = "disable_afit", async_trait)]
+#[cfg_attr(not(feature = "disable_afit"), async_trait)]
 /// Any kind of advertisement.
 pub trait Advertisable<T: AdvertisableData> {
     /// Advertisement-specific: validate user supplied data.

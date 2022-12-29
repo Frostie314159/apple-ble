@@ -15,7 +15,7 @@ bluer = { version = "0.15.3", features = [
 ] }
 config = "0.13.2"
 tokio = { version = "1.22.0", features = ["full"] }
-async-trait = { version = "0.1.58", optional = true }
+async-trait = "0.1.58"
 sha2 = "0.10.6"
 uuid = { version = "1.2.2", features = ["v4"] }
 sudo = "0.6.0"
@@ -27,7 +27,7 @@ clap = { version = "4.0.29", optional = true }
 [features]
 default = []
 # AFIT = async_fn_in_trait
-disable_afit = ["dep:async-trait"]
+enable_afit = []
 cli = ["dep:clap"]
 
 [[bin]]
