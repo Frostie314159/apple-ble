@@ -18,7 +18,7 @@ jobs:
     - uses: actions/checkout@v3
     - name: Setup
       run: |
-        sudo apt install -y bluez libbluetooth-dev
+        sudo apt install -y bluez libbluetooth-dev dbus
         sudo sed 's/^\(ExecStart.*\)/\1 --enable-testing/' /etc/systemd/system/bluetooth.target.wants/bluetooth.service
         sudo systemctl daemon-reload        
     - name: Build
